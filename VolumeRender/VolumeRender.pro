@@ -70,7 +70,9 @@ OTHER_FILES += \
     backpack16.raw \
     ball.raw \
     bonsai.raw \
-    BostonTeapot.raw
+    BostonTeapot.raw \
+    RayCastingAlt.frag \
+    SampleVolume.raw
 
 Data.files += $$OTHER_FILES
 

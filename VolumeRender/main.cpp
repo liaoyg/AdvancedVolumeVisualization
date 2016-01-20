@@ -75,16 +75,18 @@ int main(int argc, char *argv[])
 
     QApplication a(argc, argv);
     QDialog *mainWindow = new QDialog;
-    mainWindow->resize(1024,800);
+    mainWindow->resize(1440,900);
 
     GLWidget w;
+//    GLWidget c;
     VolumeVisEditor vEditor(mainWindow);
 
 //    TransferFunEditor tfe;
 //    tfe.show();
 
     QHBoxLayout *mainLayout = new QHBoxLayout;
-    mainLayout->addWidget(&w,6);
+    mainLayout->addWidget(&w,5);
+//    mainLayout->addWidget(&c,5);
     mainLayout->addWidget(&vEditor,2);
     mainLayout->setMargin(5);
     mainWindow->setLayout(mainLayout);

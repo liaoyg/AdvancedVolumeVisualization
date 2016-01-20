@@ -23,6 +23,10 @@ class GLWidget : public QGLWidget
 
 public:
     GLWidget(const QGLFormat &format = QGLFormat::defaultFormat(), QWidget *parent = 0);
+    enum RenderMode {
+        AUTOLINER,
+        TRICUBIC,
+    };
 
 protected:
     virtual void initializeGL();
@@ -48,8 +52,11 @@ protected:
 
     int lighttype;
 
+    GLWidget::RenderMode mode;
+
     Vec3i volumeDim;
     GLTexture::Ptr volumeTex;
+    GLTexture::Ptr volumeTexTriCubic;
     GLTexture::Ptr transferFuncTex;
     GLArrayBuffer::Ptr rectVertexBuffer;
     GLArrayBuffer::Ptr rectIndexBuffer;

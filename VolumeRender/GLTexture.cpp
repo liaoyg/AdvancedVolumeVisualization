@@ -94,6 +94,21 @@ void GLTexture::updateTexImage3D(GLint internalFormat, const Vec3i &size, GLenum
     glBindTexture(target, textureOld);
 }
 
+void GLTexture::updateTexImage3DNoInterpolation(GLint internalFormat, const Vec3i &size, GLenum format, GLenum type, const GLvoid *data)
+{
+    target = GL_TEXTURE_3D;
+    GLuint textureOld;
+    glGetIntegerv(GL_TEXTURE_BINDING_3D, (GLint *)&textureOld);
+    glBindTexture(target, texture);
+    glTexImage3D(target, 0, internalFormat, size.x, size.y, size.z, 0, format, type, data);
+    glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(target, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glBindTexture(target, textureOld);
+}
+
 void GLTexture::updateTexSubImage3D(const Vec3i &offset, const Vec3i &size, GLenum format, GLenum type, const GLvoid *data)
 {
     if(target != GL_TEXTURE_3D)

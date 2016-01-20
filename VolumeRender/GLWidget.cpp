@@ -10,12 +10,14 @@ GLWidget::GLWidget(const QGLFormat &format, QWidget *parent) :
     setMinimumSize(256, 256);
     setWindowTitle("Volume Ray-casting");
 
-    datasetName = "bonsai.raw";
-    volumeDim.x = 256;
-    volumeDim.y = 256;
-    volumeDim.z = 256;
+    datasetName = "SampleVolume.raw";
+    volumeDim.x = 32;
+    volumeDim.y = 32;
+    volumeDim.z = 32;
 
     lighttype = 2;
+
+    mode = GLWidget::RenderMode::TRICUBIC;
 }
 
 void GLWidget::initializeGL()
@@ -86,6 +88,9 @@ void GLWidget::initializeGL()
     // create OpenGL textures
     volumeTex = GLTexture::create();
     volumeTex->updateTexImage3D(GL_R8, volumeDim, GL_RED, GL_UNSIGNED_BYTE, &volumeData.front());
+    // create OpenGL textures for tricubic interpolation
+    volumeTexTriCubic = GLTexture::create();
+    volumeTexTriCubic->updateTexImage3DNoInterpolation(GL_R8, volumeDim, GL_RED, GL_UNSIGNED_BYTE, &volumeData.front());
 
     transferFuncTex = GLTexture::create();
     transferFuncTex->updateTexImage2D(GL_RGBA32F, Vec2i(int(tfdata.size()), 1), GL_RGBA, GL_FLOAT, &tfdata.front());
@@ -191,6 +196,8 @@ void GLWidget::paintGL()
     modelViewMatrix = Mat4f(rotation, translation);
     Mat4f transform = Mat4f::ortho(0, 1, 0, 1, -1, 1);
     Mat4f invModelView = modelViewMatrix.inverse();
+
+    volumeRayCastingProgram->setUniform("volumeDim", volumeDim);
     volumeRayCastingProgram->setUniform("volumeScale", volumeScale);
     volumeRayCastingProgram->setUniform("transform", transform);
     volumeRayCastingProgram->setUniform("invModelView", invModelView);
@@ -217,7 +224,10 @@ void GLWidget::paintGL()
     volumeRayCastingProgram->setUniform("LAOFlag", gb_AOFlag);
     volumeRayCastingProgram->setUniform("OCSize", opacityCorrection);
 
-    volumeRayCastingProgram->setTexture("volumeTex", volumeTex);
+    if(mode == AUTOLINER)
+        volumeRayCastingProgram->setTexture("volumeTex", volumeTex);
+    else if(mode == TRICUBIC)
+        volumeRayCastingProgram->setTexture("volumeTex", volumeTexTriCubic);
     volumeRayCastingProgram->setTexture("transferFuncTex", transferFuncTex);
     volumeRayCastingProgram->setTexture("preInt", preIntTex);
     volumeRayCastingProgram->setTexture("LAOTex", LAOTex);

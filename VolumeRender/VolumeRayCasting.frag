@@ -5,6 +5,7 @@ in vec3 CameraPos;
 
 out vec4 FragColor;
 
+uniform vec3 volumeDim;
 uniform vec3 volumeScale;
 uniform mat4 invModelView;
 uniform sampler3D volumeTex;
@@ -83,47 +84,6 @@ vec3 p2cart(float azimuth,float elevation)
     return vec3( x, y, z );
 }
 
-bool isbound(float pos)
-{
-    return ((pos <= 0.01)||(pos >= 0.99));
-}
-
-bool isBorder(vec3 s1, vec3 e1)
-{
-    float max = 0.99;
-    float min = 0.01;
-
-    //if(s1.g * s2.b == s1.b * s2.g)  return true;     // y=0,z=0
-    if(s1.g <= min && s1.b <= min)  return true;     // y=0,z=0
-    else if(s1.r <= min && s1.b <= min)  return true;// x=0,z=0
-    else if(s1.r >= max && s1.b <= min)  return true;// x=1,z=0
-    else if(s1.g >= max && s1.b <= min)  return true;// y=1,z=0
-    else if(e1.r <= min && e1.b >= max)  return true;// x=0,z=1
-    else if(e1.r >= max && e1.b >= max)  return true;// x=1,z=1
-    else if(e1.g <= min && e1.b >= max)  return true;// y=0,z=1
-    else if(e1.g >= max && e1.b >= max)  return true;// y=1,z=1
-    else if(e1.r <= min && e1.g >= max)  return true;// x=0,y=1
-    else if(e1.r <= min && e1.g <= min)  return true;// x=0,y=0
-    else if(e1.r >= max && e1.g <= min)  return true;// x=1,y=0
-    else if(e1.r >= max && e1.g >= max)  return true;// x=1,y=1
-    else                                return false;
-}
-
-bool isBorder1(vec3 origin, vec3 dir)
-{
-    int num = 0;
-    if(abs(origin.x - dir.x) <= 0)
-        num ++;
-    if(abs(origin.y - dir.y) <= 0)
-        num ++;
-    if(abs(origin.z - dir.z) <= 0)
-        num ++;
-    if(num >= 2)
-        return true;
-    else
-        return false;
-}
-
 void clipping(vec3 start, vec3 end, vec3 dir, out vec3 newstart, out vec3 newend, out vec3 newdir)
 {
     float len = length(end-start);
@@ -185,6 +145,116 @@ float getLightIntensity(vec3 norm, vec3 pos)
     return (Idiff+Iamb+Ispec);
 }
 
+float BernsteinForm(float x, int order, int level)
+{
+    if(level == 3)
+    {
+        if(order == 0)
+            return (1-x)*(1-x)*(1-x);
+        else if(order == 1)
+            return 3*(1-x)*(1-x)*x;
+        else if(order == 2)
+            return 3*(1-x)*x*x;
+        else if(order == 3)
+            return x*x*x;
+    }
+    else if (level == 2)
+    {
+        if(order == 0)
+            return (1-x)*(1-x);
+        else if(order == 1)
+            return 2*(1-x)*x;
+        else if(order == 2)
+            return x*x;
+    }
+}
+
+void triCubicSample(vec3 pos, sampler3D sampler, out float intencity, out vec3 gradient)
+{
+   float deltaX = 1.0/volumeDim.x;
+   float deltaY = 1.0/volumeDim.y;
+   float deltaZ = 1.0/volumeDim.z;
+   vec3 delta = vec3(deltaX,deltaY,deltaZ);
+
+   vec3 zerop;
+   zerop.x = floor(pos.x*volumeDim.x)*deltaX;
+   zerop.y = floor(pos.y*volumeDim.y)*deltaY;
+   zerop.z = floor(pos.z*volumeDim.z)*deltaZ;
+
+   float b[64];
+   const int offset = 1;
+   int i,j,k,x,y,z;
+   for(i = 0; i<2; i++)
+   {
+       for(j = 0; j<2; j++)
+       {
+           for(k = 0; k<2;k++)
+           {
+               int dicX = i*(-2)+1;
+               int dicY = j*(-2)+1;
+               int dicZ = k*(-2)+1;
+               vec3 coordPoint = zerop+vec3(deltaX*i,deltaY*j,deltaZ*k);
+               vec3 posp = zerop + vec3(deltaX*i, deltaY*j, deltaZ*k);
+               b[i*3+j*3*4+k*3*16] = texture(sampler, posp).r;
+               for(x = 0; x<2; x++)
+                   for(y = 0; y<2; y++)
+                       for(z = 0; z<2; z++)
+                       {
+                           b[i*3+dicX*x+(j*3+dicY*y)*4+(k*3+dicZ*z)*16] = b[i*3+j*3*4+k*3*16] + x*dicX*sampleGrad(sampler, coordPoint).x/3
+                                                                    +y*dicY*sampleGrad(sampler, coordPoint).y/3
+                                                                    +z*dicZ*sampleGrad(sampler, coordPoint).z/3;
+                       }
+           }
+        }
+   }
+   vec3 localp = (pos - zerop)/delta;
+   intencity = 0;
+   for(i = 0; i<3; i++)
+   {
+       for(j =0; j<3; j++)
+       {
+           for(k = 0; k<3;k++)
+           {
+               intencity += b[i+j*4+k*16]*BernsteinForm(localp.x,i,3)*BernsteinForm(localp.y,j,3)*BernsteinForm(localp.z,k,3);
+           }
+       }
+   }
+
+   for(i = 0; i<2; i++)
+   {
+       for(j =0; j<3; j++)
+       {
+           for(k = 0; k<3;k++)
+           {
+               gradient.x += (b[i+1+j*4+k*16] - b[i+j*4+k*16])*BernsteinForm(localp.x,i,2)*BernsteinForm(localp.y,j,3)*BernsteinForm(localp.z,k,3);
+           }
+       }
+   }
+
+   for(i = 0; i<3; i++)
+   {
+       for(j =0; j<2; j++)
+       {
+           for(k = 0; k<3;k++)
+           {
+               gradient.y += (b[i+(j+1)*4+k*16] - b[i+j*4+k*16])*BernsteinForm(localp.x,i,3)*BernsteinForm(localp.y,j,2)*BernsteinForm(localp.z,k,3);
+           }
+       }
+   }
+
+   for(i = 0; i<3; i++)
+   {
+       for(j =0; j<3; j++)
+       {
+           for(k = 0; k<2;k++)
+           {
+               gradient.z += (b[i+j*4+(k+1)*16] - b[i+j*4+k*16])*BernsteinForm(localp.x,i,3)*BernsteinForm(localp.y,j,3)*BernsteinForm(localp.z,k,2);
+           }
+       }
+   }
+}
+
+
 void main(void)
 {
         vec3 boxMin = -volumeScale;
@@ -215,11 +285,6 @@ void main(void)
         rayEnd = (1.0/boxDim)*(rayEnd - boxMin);
 
         vec4 col_acc = vec4(0,0,0,0); // The dest color
-//        if(isBorder(rayStart,rayEnd))
-//            col_acc = vec4(1.0, 1.0, 0.0, 1.0);
-
-//        vec3 originStart = rayStart;
-
         vec3 rayDir = rayEnd - rayStart;
         float len = length(rayDir);
         rayDir = normalize(rayDir);
@@ -233,7 +298,6 @@ void main(void)
                 bool frontface = (dot(rayDir , clipPlane) > 0.0);
                 //next, distance from ray origin to clip plane
                 float dis = dot(rayDir,clipPlane);
-//                vec3 center = vec3(rayStart.x - 0.5, rayStart.y - 0.5, rayStart.x -0.5);
                 if (dis != 0.0  )
                     dis = (-clipPlaneDepth - dot(clipPlane, rayStart.xyz-0.5)) / dis;
                 if ((!frontface) && (dis < 0.0))
@@ -254,12 +318,6 @@ void main(void)
                 len = length(rayDir);
                 rayDir = normalize(rayDir);
                 }
-//                vec3 newStart, newEnd, newDir;
-//                clipping(rayStart, rayEnd,rayDir,newStart, newEnd, newDir);
-//                rayStart = newStart;
-//                rayEnd = newEnd;
-//                rayDir = newDir;
-//                len = length(rayDir);
             }
 
         //lighting
@@ -290,6 +348,10 @@ void main(void)
 
             // sampling
             float currentStep = texture(volumeTex,rayStart).r;
+//            float currentStep;
+//            vec3 gradient;
+//            triCubicSample(rayStart,volumeTex,currentStep,gradient);
+
             // classify
             if(!preintFlag)
                 color_sample = texture(transferFuncTex,vec2(currentStep,0.0));
@@ -343,6 +405,7 @@ void main(void)
             if(lighttype == 3)
             {
                 float lightIntensity = getLightIntensity(sampleGrad(volumeTex,rayStart), rayStart);
+//                float lightIntensity = getLightIntensity(gradient, rayStart);
                 color_sample.rgb *=lightIntensity;
             }
 
@@ -362,20 +425,10 @@ void main(void)
             step_acc += delta;
             if(step_acc >= (t1 - delta))
                 break;
-//            if(length(rayEnd-rayStart)<delta)
-//                break;
             if(col_acc.a > 0.999)
                  break;
         }
 
         col_acc = clamp (col_acc, vec4(0.0), vec4(1.0));
-
-
-        // draw bounding box
-//        if(isfrontbordor)
-//            col_acc = vec4(0.0, 0.0, 0.0, 1.0);
-
-        //if(isBorder(rayEnd))
-            //FragColor = vec4(0.0, 0.0, 0.0, 1.0);
         FragColor = col_acc;
 }

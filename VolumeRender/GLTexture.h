@@ -26,6 +26,7 @@ public:
     void updateTexImage2D(GLint internalFormat, const Vec2i &size, GLenum format, GLenum type, const GLvoid *data);
     void updateTexSubImage2D(GLint xoffset, GLint yoffset, const Vec2i &size, GLenum format, GLenum type, const GLvoid *data);
     void updateTexImage3D(GLint internalFormat, const Vec3i &size, GLenum format, GLenum type, const GLvoid *data);
+    void updateTexImage3DNoInterpolation(GLint internalFormat, const Vec3i &size, GLenum format, GLenum type, const GLvoid *data);
     void updateTexSubImage3D(const Vec3i &offset, const Vec3i &size, GLenum format, GLenum type, const GLvoid *data);
     void updateTexImageCube(GLint internalFormat, const Vec2i &size, GLenum format, GLenum type, const GLvoid **data);
 };
