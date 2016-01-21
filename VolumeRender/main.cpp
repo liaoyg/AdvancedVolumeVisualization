@@ -11,8 +11,8 @@ bool gb_Clipflag;
 float azimuth = 123;
 float elevation = -44;
 float clipPlaneDepth = 0.2;
-float deltaStep = 0.006;
-float opacityCorrection = 0.006;
+float deltaStep = 0.05;
+float opacityCorrection = 0.02;
 
 Vec3f gb_ambient;
 Vec3f gb_lightcolor;
@@ -56,8 +56,8 @@ int main(int argc, char *argv[])
     elevation = -44;
     clipPlaneDepth = 0.2;
 
-    deltaStep = 0.006;
-    opacityCorrection = 0.006;
+    deltaStep = 0.05;
+    opacityCorrection = 0.05;
 
     gb_ambient = Vec3f(1.0,1.0,1.0);
     gb_lightcolor = Vec3f(1.0,0.0,0.0);

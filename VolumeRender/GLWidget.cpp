@@ -197,7 +197,7 @@ void GLWidget::paintGL()
     Mat4f transform = Mat4f::ortho(0, 1, 0, 1, -1, 1);
     Mat4f invModelView = modelViewMatrix.inverse();
 
-    volumeRayCastingProgram->setUniform("volumeDim", volumeDim);
+    volumeRayCastingProgram->setUniform("volumeDim", Vec3f(volumeDim));
     volumeRayCastingProgram->setUniform("volumeScale", volumeScale);
     volumeRayCastingProgram->setUniform("transform", transform);
     volumeRayCastingProgram->setUniform("invModelView", invModelView);
@@ -224,10 +224,8 @@ void GLWidget::paintGL()
     volumeRayCastingProgram->setUniform("LAOFlag", gb_AOFlag);
     volumeRayCastingProgram->setUniform("OCSize", opacityCorrection);
 
-    if(mode == AUTOLINER)
-        volumeRayCastingProgram->setTexture("volumeTex", volumeTex);
-    else if(mode == TRICUBIC)
-        volumeRayCastingProgram->setTexture("volumeTex", volumeTexTriCubic);
+    volumeRayCastingProgram->setTexture("volumeTex", volumeTex);
+//    volumeRayCastingProgram->setTexture("volumeTexCubic", volumeTexTriCubic);
     volumeRayCastingProgram->setTexture("transferFuncTex", transferFuncTex);
     volumeRayCastingProgram->setTexture("preInt", preIntTex);
     volumeRayCastingProgram->setTexture("LAOTex", LAOTex);

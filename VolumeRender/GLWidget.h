@@ -40,6 +40,7 @@ protected:
 
     void drawLAOTexture();
     void drawBoundingBox();
+//    std::vector<unsigned char> calculateIntermediateofTricubic(std::vector<unsigned char>* volumeData);
 
 protected:
     QPointF mousePos;

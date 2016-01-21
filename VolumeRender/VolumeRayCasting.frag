@@ -33,6 +33,7 @@ uniform bool preintFlag;
 uniform bool LAOFlag;
 
 uniform float deltaStep;
+
 vec3 lightPos = vec3(1.0, 1.0, 0.0);
 bool intersectBox(vec3 ori, vec3 dir, vec3 boxMin, vec3 boxMax, out float t0, out float t1)
 {
@@ -147,6 +148,8 @@ float getLightIntensity(vec3 norm, vec3 pos)
 
 float BernsteinForm(float x, int order, int level)
 {
+    if(order > level)
+        return 1;
     if(level == 3)
     {
         if(order == 0)
@@ -167,88 +170,115 @@ float BernsteinForm(float x, int order, int level)
         else if(order == 2)
             return x*x;
     }
+    else
+        return 0;
 }
 
-void triCubicSample(vec3 pos, sampler3D sampler, out float intencity, out vec3 gradient)
+void triCubicSample(vec3 pos, sampler3D sampler, out float intensity, out vec3 gradient)
 {
-   float deltaX = 1.0/volumeDim.x;
-   float deltaY = 1.0/volumeDim.y;
-   float deltaZ = 1.0/volumeDim.z;
+   vec3 volumeSize = volumeDim;
+   float deltaX = 1.0/volumeSize.x;
+   float deltaY = 1.0/volumeSize.y;
+   float deltaZ = 1.0/volumeSize.z;
    vec3 delta = vec3(deltaX,deltaY,deltaZ);
 
+//   pos = pos + vec3(0.0001,0.0001,0.0001);
    vec3 zerop;
-   zerop.x = floor(pos.x*volumeDim.x)*deltaX;
-   zerop.y = floor(pos.y*volumeDim.y)*deltaY;
-   zerop.z = floor(pos.z*volumeDim.z)*deltaZ;
+   zerop.x = floor(pos.x*volumeSize.x)*deltaX;
+   zerop.y = floor(pos.y*volumeSize.y)*deltaY;
+   zerop.z = floor(pos.z*volumeSize.z)*deltaZ;
+//   intensity = zerop.z;
+//   return;
 
-   float b[64];
-   const int offset = 1;
+//   float b[100];
+//   const int offset = 1;
    int i,j,k,x,y,z;
-   for(i = 0; i<2; i++)
+//   for(i = 0; i<2; i++)
+//   {
+//       for(j = 0; j<2; j++)
+//       {
+//           for(k = 0; k<2;k++)
+//           {
+//               int dicX = i*(-2)+1;
+//               int dicY = j*(-2)+1;
+//               int dicZ = k*(-2)+1;
+////               vec3 coordPoint = zerop+vec3(deltaX*i,deltaY*j,deltaZ*k);
+//               vec3 posp = zerop + vec3(deltaX*i, deltaY*j, deltaZ*k);
+//               float intens = texture(sampler, posp).r;
+//               b[i*3+j*3*4+k*3*16] = intens;
+//               vec3 grad = sampleGrad(sampler, posp);
+//               for(x = 0; x<2; x++)
+//                   for(y = 0; y<2; y++)
+//                       for(z = 0; z<2; z++)
+//                       {
+//                           b[i*3+dicX*x+(j*3+dicY*y)*4+(k*3+dicZ*z)*16] = intens + 0.3333*(x*dicX*grad.x+y*dicY*grad.y+z*dicZ*grad.z);
+//                       }
+//           }
+//        }
+//   }
+   vec3 localp = (pos - zerop - 0.001)*(1.0/delta);
+//   if(localp.x >= 0 && localp.x <= 1)
+//   {
+//       intensity = localp.z;
+//       return;
+//   }
+//   intensity = 0;
+   for(i = 0; i<4; i++)
    {
-       for(j = 0; j<2; j++)
+       for(j =0; j<4; j++)
        {
-           for(k = 0; k<2;k++)
+           for(k = 0; k<4;k++)
            {
-               int dicX = i*(-2)+1;
-               int dicY = j*(-2)+1;
-               int dicZ = k*(-2)+1;
-               vec3 coordPoint = zerop+vec3(deltaX*i,deltaY*j,deltaZ*k);
-               vec3 posp = zerop + vec3(deltaX*i, deltaY*j, deltaZ*k);
-               b[i*3+j*3*4+k*3*16] = texture(sampler, posp).r;
-               for(x = 0; x<2; x++)
-                   for(y = 0; y<2; y++)
-                       for(z = 0; z<2; z++)
-                       {
-                           b[i*3+dicX*x+(j*3+dicY*y)*4+(k*3+dicZ*z)*16] = b[i*3+j*3*4+k*3*16] + x*dicX*sampleGrad(sampler, coordPoint).x/3
-                                                                    +y*dicY*sampleGrad(sampler, coordPoint).y/3
-                                                                    +z*dicZ*sampleGrad(sampler, coordPoint).z/3;
-                       }
-           }
-        }
-   }
-   vec3 localp = (pos - zerop)/delta;
-   intencity = 0;
-   for(i = 0; i<3; i++)
-   {
-       for(j =0; j<3; j++)
-       {
-           for(k = 0; k<3;k++)
-           {
-               intencity += b[i+j*4+k*16]*BernsteinForm(localp.x,i,3)*BernsteinForm(localp.y,j,3)*BernsteinForm(localp.z,k,3);
-           }
-       }
-   }
-
-   for(i = 0; i<2; i++)
-   {
-       for(j =0; j<3; j++)
-       {
-           for(k = 0; k<3;k++)
-           {
-               gradient.x += (b[i+1+j*4+k*16] - b[i+j*4+k*16])*BernsteinForm(localp.x,i,2)*BernsteinForm(localp.y,j,3)*BernsteinForm(localp.z,k,3);
+//               intensity += b[i+j*4+k*16]*BernsteinForm(localp.x,i,3)*BernsteinForm(localp.y,j,3)*BernsteinForm(localp.z,k,3);
+               vec3 bpos = zerop + 0.333*vec3(i*deltaX,j*deltaY,k*deltaZ);
+               float bvalue = texture(sampler, bpos).r;
+               intensity += bvalue*BernsteinForm(localp.x,i,3)*BernsteinForm(localp.y,j,3)*BernsteinForm(localp.z,k,3);
            }
        }
    }
 
+//   gradient = sampleGrad(sampler, pos);
    for(i = 0; i<3; i++)
    {
-       for(j =0; j<2; j++)
+       for(j =0; j<4; j++)
        {
-           for(k = 0; k<3;k++)
+           for(k = 0; k<4;k++)
            {
-               gradient.y += (b[i+(j+1)*4+k*16] - b[i+j*4+k*16])*BernsteinForm(localp.x,i,3)*BernsteinForm(localp.y,j,2)*BernsteinForm(localp.z,k,3);
+               vec3 b1pos = zerop + vec3((i+1)*deltaX,j*deltaY,k*deltaZ);
+               float b1value = texture(sampler, b1pos).r;
+               vec3 b2pos = zerop + vec3(i*deltaX,j*deltaY,k*deltaZ);
+               float b2value = texture(sampler, b2pos).r;
+               gradient.x += (b1value - b2value)*BernsteinForm(localp.x,i,2)*BernsteinForm(localp.y,j,3)*BernsteinForm(localp.z,k,3);
            }
        }
    }
 
-   for(i = 0; i<3; i++)
+   for(i = 0; i<4; i++)
    {
        for(j =0; j<3; j++)
        {
-           for(k = 0; k<2;k++)
+           for(k = 0; k<4;k++)
            {
-               gradient.z += (b[i+j*4+(k+1)*16] - b[i+j*4+k*16])*BernsteinForm(localp.x,i,3)*BernsteinForm(localp.y,j,3)*BernsteinForm(localp.z,k,2);
+               vec3 b1pos = zerop + vec3(i*deltaX,(j+1)*deltaY,k*deltaZ);
+               float b1value = texture(sampler, b1pos).r;
+               vec3 b2pos = zerop + vec3(i*deltaX,j*deltaY,k*deltaZ);
+               float b2value = texture(sampler, b2pos).r;
+               gradient.y += (b1value - b2value)*BernsteinForm(localp.x,i,3)*BernsteinForm(localp.y,j,2)*BernsteinForm(localp.z,k,3);
+           }
+       }
+   }
+
+   for(i = 0; i<4; i++)
+   {
+       for(j =0; j<4; j++)
+       {
+           for(k = 0; k<3;k++)
+           {
+               vec3 b1pos = zerop + vec3(i*deltaX,j*deltaY,(k+1)*deltaZ);
+               float b1value = texture(sampler, b1pos).r;
+               vec3 b2pos = zerop + vec3(i*deltaX,j*deltaY,k*deltaZ);
+               float b2value = texture(sampler, b2pos).r;
+               gradient.z += (b1value - b2value)*BernsteinForm(localp.x,i,3)*BernsteinForm(localp.y,j,3)*BernsteinForm(localp.z,k,2);
            }
        }
    }
@@ -281,7 +311,7 @@ void main(void)
         bool isfrontbordor = false;
         float originalLenth = length(rayEnd - rayStart);
 
-        rayStart = (1.0/boxDim)*(rayStart - boxMin);
+        rayStart = (1.0/boxDim)*(rayStart - boxMin); //transform to (0,1)
         rayEnd = (1.0/boxDim)*(rayEnd - boxMin);
 
         vec4 col_acc = vec4(0,0,0,0); // The dest color
@@ -347,11 +377,14 @@ void main(void)
         {
 
             // sampling
-            float currentStep = texture(volumeTex,rayStart).r;
-//            float currentStep;
-//            vec3 gradient;
-//            triCubicSample(rayStart,volumeTex,currentStep,gradient);
-
+//            float currentStep = texture(volumeTex,rayStart).r;
+            float intensity;
+            vec3 gradient;
+            triCubicSample(rayStart,volumeTex,intensity,gradient);
+            intensity = clamp(intensity, 0.0,1.0);
+            float currentStep = intensity;
+            col_acc = vec4(gradient.x,0,0,1.0);
+            break;
             // classify
             if(!preintFlag)
                 color_sample = texture(transferFuncTex,vec2(currentStep,0.0));
@@ -404,8 +437,8 @@ void main(void)
 //            }
             if(lighttype == 3)
             {
-                float lightIntensity = getLightIntensity(sampleGrad(volumeTex,rayStart), rayStart);
-//                float lightIntensity = getLightIntensity(gradient, rayStart);
+//                float lightIntensity = getLightIntensity(sampleGrad(volumeTex,rayStart), rayStart);
+                float lightIntensity = getLightIntensity(gradient, rayStart);
                 color_sample.rgb *=lightIntensity;
             }
 
