@@ -521,9 +521,9 @@ void main(void)
             if(renderMode == 0)
                 currentStep = texture(volumeTex,rayStart).r;
             else if(renderMode == 1)
-                triCubicSample(rayStart,volumeTex,currentStep,gradient);
+//                triCubicSample(rayStart,volumeTex,currentStep,gradient);
 //            {
-//                currentStep = texture(volumeTexCubic,rayStart).r;
+                currentStep = texture(volumeTexCubic,rayStart).r;
 //            }
 
 //            if(currentStep > 0)

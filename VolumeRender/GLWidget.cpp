@@ -173,7 +173,7 @@ void GLWidget::initializeGL()
 
     //Cubic interpolation precomputation
     volumeTexCubic = GLTexture::create();
-    volumeTexCubic->updateTexImage3D(GL_RGBA32F, volumeDim*3, GL_RGBA, GL_FLOAT,NULL);
+    volumeTexCubic->updateTexImage3DNoInterpolation(GL_RGBA32F, volumeDim*3, GL_RGBA, GL_FLOAT,NULL);
     TexCubicFrameBuffer = GLFramebuffer::create();
     TexCubicProgram = GLShaderProgram::create("TriCubicCof.vert", "TriCubicCof.frag");
     if(TexCubicProgram == NULL)
