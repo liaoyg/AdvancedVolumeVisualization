@@ -198,29 +198,29 @@ void triCubicSample(vec3 pos, sampler3D sampler, out float intensity, out vec3 g
    int i,j,k,x,y,z;
 
 //   float b[64];
-   for(i = 0; i<2; i++)
-   {
-       for(j = 0; j<2; j++)
-       {
-           for(k = 0; k<2;k++)
-           {
-               int dicX = i*(-2)+1;
-               int dicY = j*(-2)+1;
-               int dicZ = k*(-2)+1;
-//               vec3 coordPoint = zerop+vec3(deltaX*i,deltaY*j,deltaZ*k);
-               vec3 posp = zerop + vec3(deltaX*i, deltaY*j, deltaZ*k);
-               float intens = texture(sampler, posp).r;
-               b[i*3+j*3*4+k*3*16] = intens;
-               vec3 grad = sampleGrad(sampler, posp);
-               for(x = 0; x<2; x++)
-                   for(y = 0; y<2; y++)
-                       for(z = 0; z<2; z++)
-                       {
-                           b[i*3+dicX*x+(j*3+dicY*y)*4+(k*3+dicZ*z)*16] = intens + 0.3333*(x*dicX*grad.x+y*dicY*grad.y+z*dicZ*grad.z);
-                       }
-           }
-        }
-   }
+//   for(i = 0; i<2; i++)
+//   {
+//       for(j = 0; j<2; j++)
+//       {
+//           for(k = 0; k<2;k++)
+//           {
+//               int dicX = i*(-2)+1;
+//               int dicY = j*(-2)+1;
+//               int dicZ = k*(-2)+1;
+////               vec3 coordPoint = zerop+vec3(deltaX*i,deltaY*j,deltaZ*k);
+//               vec3 posp = zerop + vec3(deltaX*i, deltaY*j, deltaZ*k);
+//               float intens = texture(sampler, posp).r;
+//               b[i*3+j*3*4+k*3*16] = intens;
+//               vec3 grad = sampleGrad(sampler, posp);
+//               for(x = 0; x<2; x++)
+//                   for(y = 0; y<2; y++)
+//                       for(z = 0; z<2; z++)
+//                       {
+//                           b[i*3+dicX*x+(j*3+dicY*y)*4+(k*3+dicZ*z)*16] = intens + 0.3333*(x*dicX*grad.x+y*dicY*grad.y+z*dicZ*grad.z);
+//                       }
+//           }
+//        }
+//   }
 
    vec3 localp = (pos - zerop)*(1.0/delta);
 //   intensity = localp.x;
@@ -238,7 +238,8 @@ void triCubicSample(vec3 pos, sampler3D sampler, out float intensity, out vec3 g
        {
            for(k = 0; k<4;k++)
            {
-               float bvalue = getBValue(i+j*4+k*16);
+               vec3 bijkPos = localp + vec3(i*deltaX, j*deltaY, k*deltaZ)*(1.0/3.0);
+               float bvalue = texture(volumeTexCubic, bijkPos).r;
                intensity += bvalue*BThree[0][i]*BThree[1][j]*BThree[2][k];
            }
        }
@@ -523,9 +524,6 @@ void main(void)
                 triCubicSample(rayStart,volumeTex,currentStep,gradient);
 //            {
 //                currentStep = texture(volumeTexCubic,rayStart).r;
-//                if(currentStep < 1)
-//                    col_acc = texture(volumeTexCubic,rayStart);
-//                break;
 //            }
 
 //            if(currentStep > 0)
