@@ -3,7 +3,7 @@
 #include <fstream>
 #include <vector>
 
-GLWidget::GLWidget(const QGLFormat &format, QWidget *parent) :
+GLWidget::GLWidget(RenderMode rMode, const QGLFormat &format, QWidget *parent) :
     QGLWidget(format, parent)
 {
     setFocusPolicy(Qt::ClickFocus);
@@ -17,7 +17,7 @@ GLWidget::GLWidget(const QGLFormat &format, QWidget *parent) :
 
     lighttype = 2;
 
-    mode = GLWidget::RenderMode::TRICUBIC;
+    mode = rMode;
 }
 
 void GLWidget::initializeGL()
@@ -58,7 +58,7 @@ void GLWidget::initializeGL()
         close();
     }
 
-    ifs.read(reinterpret_cast<char *>(&volumeData.front()), volumeSize * sizeof(float));
+    ifs.read(reinterpret_cast<char *>(&volumeData.front()), volumeSize * sizeof(unsigned char));
     ifs.close();
 
     // prepare transfer function data
@@ -89,6 +89,9 @@ void GLWidget::initializeGL()
     volumeTex = GLTexture::create();
     volumeTex->updateTexImage3D(GL_R8, volumeDim, GL_RED, GL_UNSIGNED_BYTE, &volumeData.front());
     // create OpenGL textures for tricubic interpolation
+    std::vector<unsigned char> volumeDataCubic;
+    volumeDataCubic.resize(volumeSize*64);
+
     volumeTexTriCubic = GLTexture::create();
     volumeTexTriCubic->updateTexImage3DNoInterpolation(GL_R8, volumeDim, GL_RED, GL_UNSIGNED_BYTE, &volumeData.front());
 
@@ -197,6 +200,7 @@ void GLWidget::paintGL()
     Mat4f transform = Mat4f::ortho(0, 1, 0, 1, -1, 1);
     Mat4f invModelView = modelViewMatrix.inverse();
 
+    volumeRayCastingProgram->setUniform("renderMode", int(mode));
     volumeRayCastingProgram->setUniform("volumeDim", Vec3f(volumeDim));
     volumeRayCastingProgram->setUniform("volumeScale", volumeScale);
     volumeRayCastingProgram->setUniform("transform", transform);
@@ -504,3 +508,22 @@ void GLWidget::drawBoundingBox()
     bBoxVertexArray->drawArrays(GL_LINE_LOOP, 4);
     boundBoxProgram->end();
 }
+
+void GLWidget::SetRanderMode(RenderMode MODE)
+{
+    mode = MODE;
+}
+
+//void GLWidget::createCubicCofData(std::vector<unsigned char> &source, std::vector<unsigned char> &cubicdata, Vec3 dataDim)
+//{
+//    cubicdata.resize(source.size()*8);
+//    for(int i = 0; i< dataDim.x; i++)
+//        for(int j = 0; j<dataDim.y; j++)
+//            for(int k = 0; k< dataDim.z; k++)
+//            {
+//                Vec3f gradient;
+//                if(i > 0 && i <dataDim.x-1)
+//                    gradient.x = (source[i+j*dataDim.y+k*dataDim.y*dataDim.z]-source[i+j*dataDim.y+k*dataDim.y*dataDim.z])/2;
+//            }
+
+//}

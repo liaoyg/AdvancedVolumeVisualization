@@ -22,11 +22,11 @@ class GLWidget : public QGLWidget
     Q_OBJECT
 
 public:
-    GLWidget(const QGLFormat &format = QGLFormat::defaultFormat(), QWidget *parent = 0);
     enum RenderMode {
-        AUTOLINER,
-        TRICUBIC,
+        AUTOLINER = 0,
+        TRICUBIC = 1,
     };
+    GLWidget(RenderMode rMode, const QGLFormat &format = QGLFormat::defaultFormat(), QWidget *parent = 0);
 
 protected:
     virtual void initializeGL();
@@ -40,6 +40,7 @@ protected:
 
     void drawLAOTexture();
     void drawBoundingBox();
+//    void createCubicCofData(std::vector<unsigned char> &source, std::vector<unsigned char> &cubicdata, Vec3 dataDim);
 //    std::vector<unsigned char> calculateIntermediateofTricubic(std::vector<unsigned char>* volumeData);
 
 protected:
@@ -87,6 +88,7 @@ public slots:
     void UpdateStepSize(float size);
     void UpdateOpacityCorretion(float para);
     void UpdateLight(int type);
+    void SetRanderMode(RenderMode MODE);
 };
 
 #endif // GLWIDGET_H

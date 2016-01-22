@@ -33,6 +33,7 @@ uniform bool preintFlag;
 uniform bool LAOFlag;
 
 uniform float deltaStep;
+uniform int renderMode;
 
 vec3 lightPos = vec3(1.0, 1.0, 0.0);
 bool intersectBox(vec3 ori, vec3 dir, vec3 boxMin, vec3 boxMax, out float t0, out float t1)
@@ -182,106 +183,227 @@ void triCubicSample(vec3 pos, sampler3D sampler, out float intensity, out vec3 g
    float deltaZ = 1.0/volumeSize.z;
    vec3 delta = vec3(deltaX,deltaY,deltaZ);
 
-//   pos = pos + vec3(0.0001,0.0001,0.0001);
    vec3 zerop;
    zerop.x = floor(pos.x*volumeSize.x)*deltaX;
    zerop.y = floor(pos.y*volumeSize.y)*deltaY;
    zerop.z = floor(pos.z*volumeSize.z)*deltaZ;
-//   intensity = zerop.z;
-//   return;
-
-//   float b[100];
-//   const int offset = 1;
    int i,j,k,x,y,z;
-//   for(i = 0; i<2; i++)
+
+   float b[64];
+   for(i = 0; i<2; i++)
+   {
+       for(j = 0; j<2; j++)
+       {
+           for(k = 0; k<2;k++)
+           {
+               int dicX = i*(-2)+1;
+               int dicY = j*(-2)+1;
+               int dicZ = k*(-2)+1;
+//               vec3 coordPoint = zerop+vec3(deltaX*i,deltaY*j,deltaZ*k);
+               vec3 posp = zerop + vec3(deltaX*i, deltaY*j, deltaZ*k);
+               float intens = texture(sampler, posp).r;
+               b[i*3+j*3*4+k*3*16] = intens;
+               vec3 grad = sampleGrad(sampler, posp);
+               for(x = 0; x<2; x++)
+                   for(y = 0; y<2; y++)
+                       for(z = 0; z<2; z++)
+                       {
+                           b[i*3+dicX*x+(j*3+dicY*y)*4+(k*3+dicZ*z)*16] = intens + 0.3333*(x*dicX*grad.x+y*dicY*grad.y+z*dicZ*grad.z);
+                       }
+           }
+        }
+   }
+
+   vec3 localp = (pos - zerop)*(1.0/delta);
+//   for(i = 0; i<4; i++)
 //   {
-//       for(j = 0; j<2; j++)
+//       for(j =0; j<4; j++)
 //       {
-//           for(k = 0; k<2;k++)
+//           for(k = 0; k<4;k++)
 //           {
-//               int dicX = i*(-2)+1;
-//               int dicY = j*(-2)+1;
-//               int dicZ = k*(-2)+1;
-////               vec3 coordPoint = zerop+vec3(deltaX*i,deltaY*j,deltaZ*k);
-//               vec3 posp = zerop + vec3(deltaX*i, deltaY*j, deltaZ*k);
-//               float intens = texture(sampler, posp).r;
-//               b[i*3+j*3*4+k*3*16] = intens;
-//               vec3 grad = sampleGrad(sampler, posp);
-//               for(x = 0; x<2; x++)
-//                   for(y = 0; y<2; y++)
-//                       for(z = 0; z<2; z++)
-//                       {
-//                           b[i*3+dicX*x+(j*3+dicY*y)*4+(k*3+dicZ*z)*16] = intens + 0.3333*(x*dicX*grad.x+y*dicY*grad.y+z*dicZ*grad.z);
-//                       }
+//               vec3 bpos = zerop +(1.0/3)*vec3(i*deltaX,j*deltaY,k*deltaZ);
+//               float bvalue = texture(sampler, bpos).r;
+//               intensity += bvalue*BernsteinForm(localp.x,i,3)*BernsteinForm(localp.y,j,3)*BernsteinForm(localp.z,k,3);
 //           }
-//        }
+//       }
 //   }
-   vec3 localp = (pos - zerop - 0.001)*(1.0/delta);
-//   if(localp.x >= 0 && localp.x <= 1)
+
+
+       intensity += b[0]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,0,3);
+       intensity += b[1]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,0,3);
+       intensity += b[2]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,0,3);
+       intensity += b[3]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,0,3);
+       intensity += b[4]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,0,3);
+       intensity += b[5]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,0,3);
+       intensity += b[6]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,0,3);
+       intensity += b[7]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,0,3);
+       intensity += b[8]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,0,3);
+       intensity += b[9]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,0,3);
+       intensity += b[10]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,0,3);
+       intensity += b[11]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,0,3);
+       intensity += b[12]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,0,3);
+       intensity += b[13]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,0,3);
+       intensity += b[14]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,0,3);
+       intensity += b[15]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,0,3);
+       intensity += b[16]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,1,3);
+       intensity += b[17]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,1,3);
+       intensity += b[18]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,1,3);
+       intensity += b[19]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,1,3);
+       intensity += b[20]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,1,3);
+       intensity += b[21]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,1,3);
+       intensity += b[22]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,1,3);
+       intensity += b[23]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,1,3);
+       intensity += b[24]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,1,3);
+       intensity += b[25]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,1,3);
+       intensity += b[26]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,1,3);
+       intensity += b[27]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,1,3);
+       intensity += b[28]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,1,3);
+       intensity += b[29]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,1,3);
+       intensity += b[30]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,1,3);
+       intensity += b[31]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,1,3);
+       intensity += b[32]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,2,3);
+       intensity += b[33]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,2,3);
+       intensity += b[34]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,2,3);
+       intensity += b[35]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,2,3);
+       intensity += b[36]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,2,3);
+       intensity += b[37]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,2,3);
+       intensity += b[38]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,2,3);
+       intensity += b[39]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,2,3);
+       intensity += b[40]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,2,3);
+       intensity += b[41]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,2,3);
+       intensity += b[42]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,2,3);
+       intensity += b[43]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,2,3);
+       intensity += b[44]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,2,3);
+       intensity += b[45]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,2,3);
+       intensity += b[46]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,2,3);
+       intensity += b[47]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,2,3);
+       intensity += b[48]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,3,3);
+       intensity += b[49]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,3,3);
+       intensity += b[50]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,3,3);
+       intensity += b[51]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,3,3);
+       intensity += b[52]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,3,3);
+       intensity += b[53]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,3,3);
+       intensity += b[54]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,3,3);
+       intensity += b[55]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,3,3);
+       intensity += b[56]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,3,3);
+       intensity += b[57]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,3,3);
+       intensity += b[58]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,3,3);
+       intensity += b[59]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,3,3);
+       intensity += b[60]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,3,3);
+       intensity += b[61]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,3,3);
+       intensity += b[62]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,3,3);
+       intensity += b[63]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,3,3);
+
+//               intensity = b[0]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,0,3)
+//               + b[1]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,0,3)
+//               + b[2]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,0,3)
+//               + b[3]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,0,3)
+//               + b[4]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,0,3)
+//               + b[5]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,0,3)
+//               + b[6]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,0,3)
+//               + b[7]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,0,3)
+//               + b[8]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,0,3)
+//               + b[9]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,0,3)
+//               + b[10]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,0,3)
+//               + b[11]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,0,3)
+//               + b[12]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,0,3)
+//               + b[13]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,0,3)
+//               + b[14]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,0,3)
+//               + b[15]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,0,3)
+//               + b[16]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,1,3)
+//               + b[17]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,1,3)
+//               + b[18]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,1,3)
+//               + b[19]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,1,3)
+//               + b[20]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,1,3)
+//               + b[21]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,1,3)
+//               + b[22]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,1,3)
+//               + b[23]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,1,3)
+//               + b[24]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,1,3)
+//               + b[25]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,1,3)
+//               + b[26]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,1,3)
+//               + b[27]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,1,3)
+//               + b[28]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,1,3)
+//               + b[29]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,1,3)
+//               + b[30]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,1,3)
+//               + b[31]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,1,3)
+//               + b[32]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,2,3)
+//               + b[33]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,2,3)
+//               + b[34]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,2,3)
+//               + b[35]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,2,3)
+//               + b[36]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,2,3)
+//               + b[37]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,2,3)
+//               + b[38]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,2,3)
+//               + b[39]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,2,3)
+//               + b[40]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,2,3)
+//               + b[41]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,2,3)
+//               + b[42]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,2,3)
+//               + b[43]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,2,3)
+//               + b[44]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,2,3)
+//               + b[45]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,2,3)
+//               + b[46]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,2,3)
+//               + b[47]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,2,3)
+//               + b[48]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,3,3)
+//               + b[49]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,3,3)
+//               + b[50]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,3,3)
+//               + b[51]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,0,3)*BernsteinForm(localp.z,3,3)
+//               + b[52]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,3,3)
+//               + b[53]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,3,3)
+//               + b[54]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,3,3)
+//               + b[55]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,1,3)*BernsteinForm(localp.z,3,3)
+//               + b[56]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,3,3)
+//               + b[57]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,3,3)
+//               + b[58]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,3,3)
+//               + b[59]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,2,3)*BernsteinForm(localp.z,3,3)
+//               + b[60]*BernsteinForm(localp.x,0,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,3,3)
+//               + b[61]*BernsteinForm(localp.x,1,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,3,3)
+//               + b[62]*BernsteinForm(localp.x,2,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,3,3)
+//               + b[63]*BernsteinForm(localp.x,3,3)*BernsteinForm(localp.y,3,3)*BernsteinForm(localp.z,3,3);
+
+//   for(i = 0; i<3; i++)
 //   {
-//       intensity = localp.z;
-//       return;
+//       for(j =0; j<4; j++)
+//       {
+//           for(k = 0; k<4;k++)
+//           {
+//               vec3 b1pos = zerop + (1.0/3)*vec3((i+1)*deltaX,j*deltaY,k*deltaZ);
+//               float b1value = texture(sampler, b1pos).r;
+//               vec3 b2pos = zerop + (1.0/3)*vec3(i*deltaX,j*deltaY,k*deltaZ);
+//               float b2value = texture(sampler, b2pos).r;
+//               gradient.x += 3*(b1value - b2value)*BernsteinForm(localp.x,i,2)*BernsteinForm(localp.y,j,3)*BernsteinForm(localp.z,k,3);
+//           }
+//       }
 //   }
-//   intensity = 0;
-   for(i = 0; i<4; i++)
-   {
-       for(j =0; j<4; j++)
-       {
-           for(k = 0; k<4;k++)
-           {
-//               intensity += b[i+j*4+k*16]*BernsteinForm(localp.x,i,3)*BernsteinForm(localp.y,j,3)*BernsteinForm(localp.z,k,3);
-               vec3 bpos = zerop + 0.333*vec3(i*deltaX,j*deltaY,k*deltaZ);
-               float bvalue = texture(sampler, bpos).r;
-               intensity += bvalue*BernsteinForm(localp.x,i,3)*BernsteinForm(localp.y,j,3)*BernsteinForm(localp.z,k,3);
-           }
-       }
-   }
 
-//   gradient = sampleGrad(sampler, pos);
-   for(i = 0; i<3; i++)
-   {
-       for(j =0; j<4; j++)
-       {
-           for(k = 0; k<4;k++)
-           {
-               vec3 b1pos = zerop + vec3((i+1)*deltaX,j*deltaY,k*deltaZ);
-               float b1value = texture(sampler, b1pos).r;
-               vec3 b2pos = zerop + vec3(i*deltaX,j*deltaY,k*deltaZ);
-               float b2value = texture(sampler, b2pos).r;
-               gradient.x += (b1value - b2value)*BernsteinForm(localp.x,i,2)*BernsteinForm(localp.y,j,3)*BernsteinForm(localp.z,k,3);
-           }
-       }
-   }
+//   for(i = 0; i<4; i++)
+//   {
+//       for(j =0; j<3; j++)
+//       {
+//           for(k = 0; k<4;k++)
+//           {
+//               vec3 b1pos = zerop + (1.0/3)*vec3(i*deltaX,(j+1)*deltaY,k*deltaZ);
+//               float b1value = texture(sampler, b1pos).r;
+//               vec3 b2pos = zerop + (1.0/3)*vec3(i*deltaX,j*deltaY,k*deltaZ);
+//               float b2value = texture(sampler, b2pos).r;
+//               gradient.y += 3*(b1value - b2value)*BernsteinForm(localp.x,i,3)*BernsteinForm(localp.y,j,2)*BernsteinForm(localp.z,k,3);
+//           }
+//       }
+//   }
 
-   for(i = 0; i<4; i++)
-   {
-       for(j =0; j<3; j++)
-       {
-           for(k = 0; k<4;k++)
-           {
-               vec3 b1pos = zerop + vec3(i*deltaX,(j+1)*deltaY,k*deltaZ);
-               float b1value = texture(sampler, b1pos).r;
-               vec3 b2pos = zerop + vec3(i*deltaX,j*deltaY,k*deltaZ);
-               float b2value = texture(sampler, b2pos).r;
-               gradient.y += (b1value - b2value)*BernsteinForm(localp.x,i,3)*BernsteinForm(localp.y,j,2)*BernsteinForm(localp.z,k,3);
-           }
-       }
-   }
+//   for(i = 0; i<4; i++)
+//   {
+//       for(j =0; j<4; j++)
+//       {
+//           for(k = 0; k<3;k++)
+//           {
+//               vec3 b1pos = zerop + (1.0/3)*vec3(i*deltaX,j*deltaY,(k+1)*deltaZ);
+//               float b1value = texture(sampler, b1pos).r;
+//               vec3 b2pos = zerop + (1.0/3)*vec3(i*deltaX,j*deltaY,k*deltaZ);
+//               float b2value = texture(sampler, b2pos).r;
+//               gradient.z += 3*(b1value - b2value)*BernsteinForm(localp.x,i,3)*BernsteinForm(localp.y,j,3)*BernsteinForm(localp.z,k,2);
+//           }
+//       }
+//   }
 
-   for(i = 0; i<4; i++)
-   {
-       for(j =0; j<4; j++)
-       {
-           for(k = 0; k<3;k++)
-           {
-               vec3 b1pos = zerop + vec3(i*deltaX,j*deltaY,(k+1)*deltaZ);
-               float b1value = texture(sampler, b1pos).r;
-               vec3 b2pos = zerop + vec3(i*deltaX,j*deltaY,k*deltaZ);
-               float b2value = texture(sampler, b2pos).r;
-               gradient.z += (b1value - b2value)*BernsteinForm(localp.x,i,3)*BernsteinForm(localp.y,j,3)*BernsteinForm(localp.z,k,2);
-           }
-       }
-   }
 }
 
 
@@ -377,14 +499,15 @@ void main(void)
         {
 
             // sampling
-//            float currentStep = texture(volumeTex,rayStart).r;
-            float intensity;
+            float currentStep;
             vec3 gradient;
-            triCubicSample(rayStart,volumeTex,intensity,gradient);
-            intensity = clamp(intensity, 0.0,1.0);
-            float currentStep = intensity;
-            col_acc = vec4(gradient.x,0,0,1.0);
-            break;
+//            col_acc = vec4(renderMode,0,1-renderMode,1);
+//            break;
+            if(renderMode == 0)
+                currentStep = texture(volumeTex,rayStart).r;
+            else if(renderMode == 1)
+                triCubicSample(rayStart,volumeTex,currentStep,gradient);
+
             // classify
             if(!preintFlag)
                 color_sample = texture(transferFuncTex,vec2(currentStep,0.0));
@@ -437,8 +560,8 @@ void main(void)
 //            }
             if(lighttype == 3)
             {
-//                float lightIntensity = getLightIntensity(sampleGrad(volumeTex,rayStart), rayStart);
-                float lightIntensity = getLightIntensity(gradient, rayStart);
+                float lightIntensity = getLightIntensity(sampleGrad(volumeTex,rayStart), rayStart);
+//                float lightIntensity = getLightIntensity(gradient, rayStart);
                 color_sample.rgb *=lightIntensity;
             }
 

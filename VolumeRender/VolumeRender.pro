@@ -72,7 +72,9 @@ OTHER_FILES += \
     bonsai.raw \
     BostonTeapot.raw \
     RayCastingAlt.frag \
-    SampleVolume.raw
+    SampleVolume.raw \
+    TriCubicCof.frag \
+    TriCubicCof.vert
 
 Data.files += $$OTHER_FILES
 

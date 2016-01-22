@@ -31,6 +31,18 @@ float gb_SpecularC;
 bool gb_AOFlag;
 bool gb_PreIntFlag;
 
+void ConnectFun(GLWidget &w, VolumeVisEditor &vEditor )
+{
+    QObject::connect(&vEditor, SIGNAL(ApplyClipflagToGl(Vec3f)), &w, SLOT(GetClipflag(Vec3f)));
+    QObject::connect(&vEditor, SIGNAL(ApplyTF()), &w, SLOT(UpdateTransferFun()));
+    QObject::connect(&vEditor,SIGNAL(ApplyDatasetToGL(QString,Vec3i)), &w, SLOT(OpenNewDataset(QString,Vec3i)));
+    QObject::connect(&vEditor,SIGNAL(ApplySStepToGL(float)), &w, SLOT(UpdateStepSize(float)));
+    QObject::connect(&vEditor,SIGNAL(ApplyOCorrectionToGL(float)), &w, SLOT(UpdateOpacityCorretion(float)));
+    QObject::connect(&vEditor,SIGNAL(ApplyLightToGL(int)), &w, SLOT(UpdateLight(int)));
+    QObject::connect(&vEditor,SIGNAL(ApplyPhongToGL(int)), &w, SLOT(UpdateLight(int)));
+    return;
+}
+
 int main(int argc, char *argv[])
 {
 
@@ -77,16 +89,16 @@ int main(int argc, char *argv[])
     QDialog *mainWindow = new QDialog;
     mainWindow->resize(1440,900);
 
-    GLWidget w;
-//    GLWidget c;
+    GLWidget w(GLWidget::RenderMode::TRICUBIC);
+    GLWidget c(GLWidget::RenderMode::AUTOLINER);
     VolumeVisEditor vEditor(mainWindow);
 
 //    TransferFunEditor tfe;
 //    tfe.show();
 
     QHBoxLayout *mainLayout = new QHBoxLayout;
-    mainLayout->addWidget(&w,5);
-//    mainLayout->addWidget(&c,5);
+    mainLayout->addWidget(&w,4);
+    mainLayout->addWidget(&c,4);
     mainLayout->addWidget(&vEditor,2);
     mainLayout->setMargin(5);
     mainWindow->setLayout(mainLayout);
@@ -94,12 +106,14 @@ int main(int argc, char *argv[])
     a.setActiveWindow(mainWindow);
     mainWindow->show();
 
-    QObject::connect(&vEditor, SIGNAL(ApplyClipflagToGl(Vec3f)), &w, SLOT(GetClipflag(Vec3f)));
-    QObject::connect(&vEditor, SIGNAL(ApplyTF()), &w, SLOT(UpdateTransferFun()));
-    QObject::connect(&vEditor,SIGNAL(ApplyDatasetToGL(QString,Vec3i)), &w, SLOT(OpenNewDataset(QString,Vec3i)));
-    QObject::connect(&vEditor,SIGNAL(ApplySStepToGL(float)), &w, SLOT(UpdateStepSize(float)));
-    QObject::connect(&vEditor,SIGNAL(ApplyOCorrectionToGL(float)), &w, SLOT(UpdateOpacityCorretion(float)));
-    QObject::connect(&vEditor,SIGNAL(ApplyLightToGL(int)), &w, SLOT(UpdateLight(int)));
-    QObject::connect(&vEditor,SIGNAL(ApplyPhongToGL(int)), &w, SLOT(UpdateLight(int)));
+//    QObject::connect(&vEditor, SIGNAL(ApplyClipflagToGl(Vec3f)), &w, SLOT(GetClipflag(Vec3f)));
+//    QObject::connect(&vEditor, SIGNAL(ApplyTF()), &w, SLOT(UpdateTransferFun()));
+//    QObject::connect(&vEditor,SIGNAL(ApplyDatasetToGL(QString,Vec3i)), &w, SLOT(OpenNewDataset(QString,Vec3i)));
+//    QObject::connect(&vEditor,SIGNAL(ApplySStepToGL(float)), &w, SLOT(UpdateStepSize(float)));
+//    QObject::connect(&vEditor,SIGNAL(ApplyOCorrectionToGL(float)), &w, SLOT(UpdateOpacityCorretion(float)));
+//    QObject::connect(&vEditor,SIGNAL(ApplyLightToGL(int)), &w, SLOT(UpdateLight(int)));
+//    QObject::connect(&vEditor,SIGNAL(ApplyPhongToGL(int)), &w, SLOT(UpdateLight(int)));
+    ConnectFun(w, vEditor);
+    ConnectFun(c, vEditor);
     return a.exec();
 }
