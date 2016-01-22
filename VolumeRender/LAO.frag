@@ -4,6 +4,7 @@ out vec4 accum;
 in vec2 pos;
 
 uniform vec3 volumeScale;
+uniform vec3 volumeDim;
 uniform int layer;
 
 uniform sampler3D volumeTex;
@@ -36,32 +37,36 @@ void main(void)
     float samplesize = 0.002;
     int occSamples = 24;
     int raynumber = 8;
-    float z = float((2*layer + 1 )/boxDim.z);
+
+    float z = (layer)/volumeDim.z;
 //    float z = float((layer ＋ 0.5)*2/boxDim.z);
+
+
     vec3 pointPos = vec3(pos, z);
-    float Pi = 3.14159;
-    float deltaTheta = 2*Pi/raynumber;
+//    float Pi = 3.14159;
+//    float deltaTheta = 2*Pi/raynumber;
 
-    mat3 rotation = rotationMatrix(deltaTheta,deltaTheta,deltaTheta);
-    for(int i = 0; i<raynumber;i++)
-    {
-        vec3 start = pointPos;
-        vec3 deltadir = normalize(dir)*samplesize;
+//    mat3 rotation = rotationMatrix(deltaTheta,deltaTheta,deltaTheta);
+//    for(int i = 0; i<raynumber;i++)
+//    {
+//        vec3 start = pointPos;
+//        vec3 deltadir = normalize(dir)*samplesize;
 
-        float s = texture(volumeTex, start).a;
-        start += deltadir;
-        for(int i=0; i<occSamples; i++)
-        {
-            float t = texture(volumeTex, start).a;
-            float a = texture(preIntTex, vec2(s, t)).a;
-            accum.a += (1.0/raynumber)*(1.0 - accum.a)*a;
-            s = t;
-            start += deltadir;
-        }
-//        accum = clamp(accum, vec4(0.0), vec4(1.0));
-        dir = dir*rotation;
-    }
-    accum = clamp(accum, vec4(0.0), vec4(1.0));
-
-    //accum = vec4(1.0,0.0,0.0,1.0);
+//        float s = texture(volumeTex, start).a;
+//        start += deltadir;
+//        for(int i=0; i<occSamples; i++)
+//        {
+//            float t = texture(volumeTex, start).a;
+//            float a = texture(preIntTex, vec2(s, t)).a;
+//            accum.a += (1.0/raynumber)*(1.0 - accum.a)*a;
+//            s = t;
+//            start += deltadir;
+//        }
+////        accum = clamp(accum, vec4(0.0), vec4(1.0));
+//        dir = dir*rotation;
+//    }
+//    accum = clamp(accum, vec4(0.0), vec4(1.0));
+//    if(pos.x == pos.y)
+        accum = texture(volumeTex, pointPos);
+//    accum = vec4(z,0,0,1);
 }

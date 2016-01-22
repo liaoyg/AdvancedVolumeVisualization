@@ -40,6 +40,7 @@ protected:
 
     void drawLAOTexture();
     void drawBoundingBox();
+    void drawCubicTexture();
 //    void createCubicCofData(std::vector<unsigned char> &source, std::vector<unsigned char> &cubicdata, Vec3 dataDim);
 //    std::vector<unsigned char> calculateIntermediateofTricubic(std::vector<unsigned char>* volumeData);
 
@@ -80,6 +81,13 @@ protected:
     GLVertexArray::Ptr LAOVertexArray;
     GLFramebuffer::Ptr LAOFrameBuffer;
     GLShaderProgram::Ptr LAOProgram;
+
+    //Cubic interpolation pre-tex
+    GLTexture::Ptr volumeTexCubic;
+    GLArrayBuffer::Ptr TexCubicBuffer;
+    GLVertexArray::Ptr TexCubicArray;
+    GLFramebuffer::Ptr TexCubicFrameBuffer;
+    GLShaderProgram::Ptr TexCubicProgram;
 
 public slots:
     void GetClipflag(Vec3f clip);

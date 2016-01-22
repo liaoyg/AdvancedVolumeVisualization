@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
     tfdata.push_back(Vec4f(1.0f, 0.0f, 1.0f, 0.5f));
 
     gb_Clipflag = false;
-    gb_PreIntFlag = true;
+    gb_PreIntFlag = false;
     gb_AOFlag = false;
     azimuth = 123;
     elevation = -44;

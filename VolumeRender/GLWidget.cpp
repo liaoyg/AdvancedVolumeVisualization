@@ -63,12 +63,6 @@ void GLWidget::initializeGL()
 
     // prepare transfer function data
     tfdata.clear();
-//    tfdata.push_back(Vec4f(1.0f, 0.0f, 0.0f, 0.0f));
-//    tfdata.push_back(Vec4f(1.0f, 1.0f, 0.0f, 0.1f));
-//    tfdata.push_back(Vec4f(0.0f, 1.0f, 0.0f, 0.2f));
-//    tfdata.push_back(Vec4f(0.0f, 1.0f, 1.0f, 0.3f));
-//    tfdata.push_back(Vec4f(0.0f, 0.0f, 1.0f, 0.4f));
-//    tfdata.push_back(Vec4f(1.0f, 0.0f, 1.0f, 0.5f));
     for(int i = 0; i< 512; i++)
     {
         if(i < 64)
@@ -172,16 +166,19 @@ void GLWidget::initializeGL()
     LAOTex->updateTexImage3D(GL_RGBA32F, volumeDim, GL_RGBA, GL_FLOAT,NULL);
 
     LAOFrameBuffer = GLFramebuffer::create();
-    LAOFrameBuffer->bind();
-    colAtt = GL_COLOR_ATTACHMENT0;
-    glDrawBuffers(1, &colAtt);
-    LAOFrameBuffer->attachTexture(colAtt,LAOTex);
-    LAOFrameBuffer->release();
-
     LAOProgram = GLShaderProgram::create("LAO.vert", "LAO.frag");
     if(LAOProgram == NULL)
         close();
     drawLAOTexture();
+
+    //Cubic interpolation precomputation
+    volumeTexCubic = GLTexture::create();
+    volumeTexCubic->updateTexImage3D(GL_RGBA32F, volumeDim*3, GL_RGBA, GL_FLOAT,NULL);
+    TexCubicFrameBuffer = GLFramebuffer::create();
+    TexCubicProgram = GLShaderProgram::create("TriCubicCof.vert", "TriCubicCof.frag");
+    if(TexCubicProgram == NULL)
+        close();
+    drawCubicTexture();
 }
 
 void GLWidget::resizeGL(int w, int h)
@@ -229,7 +226,7 @@ void GLWidget::paintGL()
     volumeRayCastingProgram->setUniform("OCSize", opacityCorrection);
 
     volumeRayCastingProgram->setTexture("volumeTex", volumeTex);
-//    volumeRayCastingProgram->setTexture("volumeTexCubic", volumeTexTriCubic);
+    volumeRayCastingProgram->setTexture("volumeTexCubic", volumeTexCubic);
     volumeRayCastingProgram->setTexture("transferFuncTex", transferFuncTex);
     volumeRayCastingProgram->setTexture("preInt", preIntTex);
     volumeRayCastingProgram->setTexture("LAOTex", LAOTex);
@@ -419,6 +416,10 @@ void GLWidget::drawLAOTexture()
         int w = width();
         int h = height();
         LAOFrameBuffer->bind();
+        glViewport(0,0,w ,w);
+        colAtt = GL_COLOR_ATTACHMENT0;
+        glDrawBuffers(1, &colAtt);
+        LAOFrameBuffer->attachTexture(colAtt,LAOTex,0,i);
         glClearColor(0.0,0.0,0.0,0.0);
         glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
 //        LAOProgram->setTexture("TF", transferFuncTex);
@@ -426,6 +427,7 @@ void GLWidget::drawLAOTexture()
         LAOProgram->setTexture("preIntTex", preIntTex);
         LAOProgram->setUniform("layer", i);
         LAOProgram->setUniform("volumeScale", volumeScale);
+        LAOProgram->setUniform("volumeDim", Vec3f(volumeDim));
 
         LAOProgram->begin();
         LAOVertexArray->drawArrays(GL_TRIANGLE_FAN, 4);
@@ -514,16 +516,46 @@ void GLWidget::SetRanderMode(RenderMode MODE)
     mode = MODE;
 }
 
-//void GLWidget::createCubicCofData(std::vector<unsigned char> &source, std::vector<unsigned char> &cubicdata, Vec3 dataDim)
-//{
-//    cubicdata.resize(source.size()*8);
-//    for(int i = 0; i< dataDim.x; i++)
-//        for(int j = 0; j<dataDim.y; j++)
-//            for(int k = 0; k< dataDim.z; k++)
-//            {
-//                Vec3f gradient;
-//                if(i > 0 && i <dataDim.x-1)
-//                    gradient.x = (source[i+j*dataDim.y+k*dataDim.y*dataDim.z]-source[i+j*dataDim.y+k*dataDim.y*dataDim.z])/2;
-//            }
+void GLWidget::drawCubicTexture()
+{
+    Vec3f volumeScale = Vec3f(volumeDim);
+    volumeScale = volumeScale / volumeScale.norm();
+    std::vector<Vec2f> rectVertices;
+    rectVertices.push_back(Vec2f(-1.0f, -1.0f));
+    rectVertices.push_back(Vec2f(-1.0f, 1.0f));
+    rectVertices.push_back(Vec2f(1.0f, 1.0f));
+    rectVertices.push_back(Vec2f(1.0f, -1.0f));
+    TexCubicBuffer = GLArrayBuffer::create(GL_ARRAY_BUFFER);
+    TexCubicBuffer->update(rectVertices.size() * sizeof(Vec2f), &rectVertices.front(), GL_STATIC_DRAW);
+    TexCubicArray = GLVertexArray::create();
+    TexCubicProgram->setVertexAttribute("V", TexCubicArray, TexCubicBuffer, 2, GL_FLOAT, false);
 
-//}
+    for(int i = 0; i< volumeDim.z*3; i++)
+    {
+        TexCubicFrameBuffer->bind();
+        colAtt = GL_COLOR_ATTACHMENT0;
+        glDrawBuffers(1, &colAtt);
+        TexCubicFrameBuffer->attachTexture(colAtt,volumeTexCubic, 0, i);
+        if(!TexCubicFrameBuffer->isComplete())
+            return;
+        int w = width();
+        int h = height();
+        glViewport(0,0,volumeDim.x*3 ,volumeDim.y*3);
+        glClearColor(0.0,0.0,0.0,0.0);
+        glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
+
+        TexCubicProgram->setTexture("volumeTex", volumeTex);
+        TexCubicProgram->setUniform("layer", float(i));
+        TexCubicProgram->setUniform("volumeScale", volumeScale);
+        TexCubicProgram->setUniform("volumeDim", Vec3f(volumeDim*3));
+
+        TexCubicProgram->begin();
+        TexCubicArray->drawArrays(GL_TRIANGLE_FAN, 4);
+        TexCubicProgram->end();
+    //    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+//        glClearColor(1.0,1.0,1.0,1.0);
+        TexCubicFrameBuffer->release();
+        glViewport(0,0,w ,h);
+    }
+
+}
