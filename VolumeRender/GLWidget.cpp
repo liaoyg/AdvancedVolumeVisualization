@@ -11,9 +11,9 @@ GLWidget::GLWidget(RenderMode rMode, const QGLFormat &format, QWidget *parent) :
     setWindowTitle("Volume Ray-casting");
 
     datasetName = "SampleVolume.raw";
-    volumeDim.x = 32;
-    volumeDim.y = 32;
-    volumeDim.z = 32;
+    volumeDim.x = 3;
+    volumeDim.y = 3;
+    volumeDim.z = 3;
 
     lighttype = 2;
 
@@ -79,15 +79,24 @@ void GLWidget::initializeGL()
             tfdata.push_back(Vec4f(1.0f, 0.0f, 1.0f, 0.0002f*i));
     }
 
+    std::vector<unsigned char> volumeDataTest;
+    for(int i = 0; i < 27; i++)
+    {
+        if( i==1)
+            volumeDataTest.push_back((unsigned char)1);
+        else
+            volumeDataTest.push_back((unsigned char)0);
+
+    }
     // create OpenGL textures
     volumeTex = GLTexture::create();
-    volumeTex->updateTexImage3D(GL_R8, volumeDim, GL_RED, GL_UNSIGNED_BYTE, &volumeData.front());
+    volumeTex->updateTexImage3D(GL_R8, volumeDim, GL_RED, GL_UNSIGNED_BYTE, &volumeDataTest.front());
     // create OpenGL textures for tricubic interpolation
     std::vector<unsigned char> volumeDataCubic;
     volumeDataCubic.resize(volumeSize*64);
 
-    volumeTexTriCubic = GLTexture::create();
-    volumeTexTriCubic->updateTexImage3DNoInterpolation(GL_R8, volumeDim, GL_RED, GL_UNSIGNED_BYTE, &volumeData.front());
+//    volumeTexTriCubic = GLTexture::create();
+//    volumeTexTriCubic->updateTexImage3DNoInterpolation(GL_R8, volumeDim, GL_RED, GL_UNSIGNED_BYTE, &volumeData.front());
 
     transferFuncTex = GLTexture::create();
     transferFuncTex->updateTexImage2D(GL_RGBA32F, Vec2i(int(tfdata.size()), 1), GL_RGBA, GL_FLOAT, &tfdata.front());
@@ -172,13 +181,13 @@ void GLWidget::initializeGL()
     drawLAOTexture();
 
     //Cubic interpolation precomputation
-    volumeTexCubic = GLTexture::create();
-    volumeTexCubic->updateTexImage3DNoInterpolation(GL_RGBA32F, volumeDim*3, GL_RGBA, GL_FLOAT,NULL);
-    TexCubicFrameBuffer = GLFramebuffer::create();
-    TexCubicProgram = GLShaderProgram::create("TriCubicCof.vert", "TriCubicCof.frag");
-    if(TexCubicProgram == NULL)
-        close();
-    drawCubicTexture();
+//    volumeTexCubic = GLTexture::create();
+//    volumeTexCubic->updateTexImage3DNoInterpolation(GL_RGBA32F, volumeDim*3, GL_RGBA, GL_FLOAT,NULL);
+//    TexCubicFrameBuffer = GLFramebuffer::create();
+//    TexCubicProgram = GLShaderProgram::create("TriCubicCof.vert", "TriCubicCof.frag");
+//    if(TexCubicProgram == NULL)
+//        close();
+//    drawCubicTexture();
 }
 
 void GLWidget::resizeGL(int w, int h)
