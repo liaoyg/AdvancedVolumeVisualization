@@ -11,6 +11,7 @@
 #include "LightSetting.h"
 #include "Global.h"
 #include "PhongShading.h"
+#include "InterpolationCompare.h"
 
 class VolumeVisEditor : public QWidget
 {
@@ -27,6 +28,7 @@ private:
     QTabWidget *basicSetting;
     QScrollArea *lightScroll;
     PhongShading *pShading;
+    InterpolationCompare *IntepComp;
 
 signals:
     void ApplyTF();
@@ -36,11 +38,14 @@ signals:
     void ApplyOCorrectionToGL(float);
     void ApplyLightToGL(int type);
     void ApplyPhongToGL(int type);
+    void ApplyGLImageReq();
+    void SendGLImageToCompare(QImage);
 
 public slots:
     void GetDim(Vec3f);
     void SendTFToGL();
     void SendDatasetToGL(QString,Vec3i);
+    void GetGLImage(QImage);
 
 };
 

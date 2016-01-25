@@ -36,12 +36,6 @@ uniform float deltaStep;
 uniform int renderMode;
 
 vec3 lightPos = vec3(1.0, 1.0, 0.0);
-float b[64];
-
-float getBValue(const int index)
-{
-    return b[index];
-}
 
 bool intersectBox(vec3 ori, vec3 dir, vec3 boxMin, vec3 boxMax, out float t0, out float t1)
 {
@@ -182,23 +176,36 @@ float BernsteinForm(float x, int order, int level)
         return 0;
 }
 
-void triCubicSample(vec3 pos, sampler3D sampler, out float intensity, out vec3 gradient)
+int gradientCoef(int posIndex)
+{
+    if(posIndex == 0 || posIndex == 3)
+        return 0;
+    else if (posIndex == 1)
+        return 1;
+    else
+        return -1;
+}
+
+void triCubicSample(vec3 pos, sampler3D sampler, out float sampleValue, out vec3 gradient)
 {
    vec3 volumeSize = volumeDim;
+   //Get the unit length for each cell
    float deltaX = 1.0/volumeSize.x;
    float deltaY = 1.0/volumeSize.y;
    float deltaZ = 1.0/volumeSize.z;
+   //unit vector
    vec3 delta = vec3(deltaX,deltaY,deltaZ);
 
+
+   //get the origin point(left bottm local coordinate is 0 0 0)
    vec3 zerop;
    zerop.x = floor(pos.x*volumeSize.x)*deltaX;
    zerop.y = floor(pos.y*volumeSize.y)*deltaY;
    zerop.z = floor(pos.z*volumeSize.z)*deltaZ;
-   int i,j,k,x,y,z;
 
+   int i,j,k,x,y,z;
    vec3 localp = (pos - zerop)*(1.0/delta);
-   intensity = 0;
-//   return;
+   sampleValue = 0;
    mat4 BThree;
    for(i = 0; i < 4; i++)
        BThree[0][i] = BernsteinForm(localp.x,i,3);
@@ -212,18 +219,19 @@ void triCubicSample(vec3 pos, sampler3D sampler, out float intensity, out vec3 g
        {
            for(k = 0; k<4;k++)
            {
+               //Find the corner point in the cell
                int dicX = i/2;
                int dicY = j/2;
                int dicZ = k/2;
                vec3 oPos = zerop + vec3(dicX*deltaX, dicY*deltaY, dicZ*deltaZ);
                vec3 gradient = sampleGrad(sampler, oPos);
-               dicX = 2*dicX - 1;
-               dicY = 2*dicY - 1;
-               dicZ = 2*dicZ - 1;
-               float bijk = texture(volumeTex, oPos).r
-                       - (1.0/3)*(dicX*gradient.x+dicY*gradient.y+dicZ*gradient.z);
+               dicX = gradientCoef(i);
+               dicY = gradientCoef(j);
+               dicZ = gradientCoef(k);
 
-               intensity += bijk*BThree[0][i]*BThree[1][j]*BThree[2][k];
+               float bijk = texture(sampler, oPos).r + (1.0/3)*(dicX*gradient.x+dicY*gradient.y+dicZ*gradient.z);
+
+               sampleValue += bijk*BThree[0][i]*BThree[1][j]*BThree[2][k];
            }
        }
    }
@@ -367,17 +375,15 @@ void main(void)
         {
 
             // sampling
-            float currentStep;
-            vec3 gradient;
+            float currentStep = 0;
+            vec3 gradient = vec3(0);
 //            col_acc = vec4(renderMode,0,1-renderMode,1);
 //            break;
             if(renderMode == 0)
                 currentStep = texture(volumeTex,rayStart).r;
             else if(renderMode == 1)
-            {
                 triCubicSample(rayStart,volumeTex,currentStep,gradient);
-//                currentStep = texture(volumeTexCubic,rayStart).r;
-            }
+
 
 //            if(currentStep > 0)
 //                col_acc = texture(LAOTex,rayStart);
@@ -390,7 +396,7 @@ void main(void)
                 color_sample = texture(preInt,vec2(preStep,currentStep));
 
             //lighting
-            float laoValue = texture(LAOTex,rayStart).r;
+//            float laoValue = texture(LAOTex,rayStart).r;
 
             if(lighttype == 3)
             {

@@ -30,7 +30,8 @@ SOURCES += main.cpp\
     TransferFun.cpp \
     TransferFunEditor.cpp \
     Volumediminput.cpp \
-    VolumeVisEditor.cpp
+    VolumeVisEditor.cpp \
+    InterpolationCompare.cpp
 
 HEADERS  += \
     DatasetSelect.h \
@@ -53,7 +54,8 @@ HEADERS  += \
     TransferFunEditor.h \
     Vec.h \
     Volumediminput.h \
-    VolumeVisEditor.h
+    VolumeVisEditor.h \
+    InterpolationCompare.h
 
 FORMS    +=
 

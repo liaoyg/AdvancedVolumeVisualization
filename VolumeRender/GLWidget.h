@@ -41,6 +41,7 @@ protected:
     void drawLAOTexture();
     void drawBoundingBox();
     void drawCubicTexture();
+    QImage ExtractScreenImage();
 //    void createCubicCofData(std::vector<unsigned char> &source, std::vector<unsigned char> &cubicdata, Vec3 dataDim);
 //    std::vector<unsigned char> calculateIntermediateofTricubic(std::vector<unsigned char>* volumeData);
 
@@ -59,7 +60,6 @@ protected:
 
     Vec3i volumeDim;
     GLTexture::Ptr volumeTex;
-    GLTexture::Ptr volumeTexTriCubic;
     GLTexture::Ptr transferFuncTex;
     GLArrayBuffer::Ptr rectVertexBuffer;
     GLArrayBuffer::Ptr rectIndexBuffer;
@@ -89,6 +89,9 @@ protected:
     GLFramebuffer::Ptr TexCubicFrameBuffer;
     GLShaderProgram::Ptr TexCubicProgram;
 
+signals:
+    void SendGLImage(QImage);
+
 public slots:
     void GetClipflag(Vec3f clip);
     void UpdateTransferFun();
@@ -97,6 +100,8 @@ public slots:
     void UpdateOpacityCorretion(float para);
     void UpdateLight(int type);
     void SetRanderMode(RenderMode MODE);
+    void ExtractImage();
+
 };
 
 #endif // GLWIDGET_H

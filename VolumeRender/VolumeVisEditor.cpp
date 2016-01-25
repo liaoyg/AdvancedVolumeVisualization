@@ -21,10 +21,12 @@ VolumeVisEditor::VolumeVisEditor(QWidget *parent) :
 //    lightScroll->resize(lgtSettting->width(),lgtSettting->height());
     pShading = new PhongShading(this);
     basicSetting = new QTabWidget(this);
+    IntepComp = new InterpolationCompare(this);
 
     basicSetting->addTab(vDim,"Clipping");
 //    basicSetting->addTab(lightScroll,"Lighting");
     basicSetting->addTab(pShading, "Phong Shading");
+    basicSetting->addTab(IntepComp, "ResultCompare");
 
     editorLayout->addWidget(dataSelect,1);
     editorLayout->addWidget(Tf,1);
@@ -44,6 +46,8 @@ VolumeVisEditor::VolumeVisEditor(QWidget *parent) :
     connect(rcSetting, SIGNAL(ApplyOpacityCorrection(float)), this, SIGNAL(ApplyOCorrectionToGL(float)));
 //    connect(lgtSettting, SIGNAL(ApplyLightSetting(int)), this, SIGNAL(ApplyLightToGL(int)));
     connect(pShading, SIGNAL(PhongShadingChange(int)), this, SIGNAL(ApplyPhongToGL(int)));
+    connect(IntepComp, SIGNAL(SendGLimageReq()), this, SIGNAL(ApplyGLImageReq()));
+    connect(this, SIGNAL(SendGLImageToCompare(QImage)), IntepComp, SLOT(GetGLImage(QImage)));
 
     emit ApplyClipflagToGl(Vec3i::zero());
     //vDim.show();
@@ -68,4 +72,9 @@ void VolumeVisEditor::SendTFToGL()
 void VolumeVisEditor::SendDatasetToGL(QString str,Vec3i dim)
 {
     emit ApplyDatasetToGL(str,dim);
+}
+
+void VolumeVisEditor::GetGLImage(QImage img)
+{
+    emit SendGLImageToCompare(img);
 }

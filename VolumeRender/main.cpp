@@ -40,6 +40,9 @@ void ConnectFun(GLWidget &w, VolumeVisEditor &vEditor )
     QObject::connect(&vEditor,SIGNAL(ApplyOCorrectionToGL(float)), &w, SLOT(UpdateOpacityCorretion(float)));
     QObject::connect(&vEditor,SIGNAL(ApplyLightToGL(int)), &w, SLOT(UpdateLight(int)));
     QObject::connect(&vEditor,SIGNAL(ApplyPhongToGL(int)), &w, SLOT(UpdateLight(int)));
+    QObject::connect(&vEditor,SIGNAL(ApplyGLImageReq()), &w, SLOT(ExtractImage()));
+    QObject::connect(&w,SIGNAL(SendGLImage(QImage)), &vEditor, SLOT(GetGLImage(QImage)));
+
     return;
 }
 

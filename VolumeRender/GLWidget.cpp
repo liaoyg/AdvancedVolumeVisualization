@@ -11,9 +11,9 @@ GLWidget::GLWidget(RenderMode rMode, const QGLFormat &format, QWidget *parent) :
     setWindowTitle("Volume Ray-casting");
 
     datasetName = "SampleVolume.raw";
-    volumeDim.x = 3;
-    volumeDim.y = 3;
-    volumeDim.z = 3;
+    volumeDim.x = 32;
+    volumeDim.y = 32;
+    volumeDim.z = 32;
 
     lighttype = 2;
 
@@ -80,20 +80,21 @@ void GLWidget::initializeGL()
     }
 
     std::vector<unsigned char> volumeDataTest;
-    for(int i = 0; i < 27; i++)
+    volumeDataTest.resize(volumeSize);
+    for(int i = 0; i < 5; i++)
+        for(int j = 0; j < 5; j++)
+            for(int k = 0; k < 5; k++)
     {
-        if( i==1)
-            volumeDataTest.push_back((unsigned char)1);
+        if( i==2 && j ==2 && k==2)
+            volumeDataTest[i+5*j+k*25] = 255;
         else
-            volumeDataTest.push_back((unsigned char)0);
+            volumeDataTest[i+5*j+k*25] = 0;
 
     }
     // create OpenGL textures
     volumeTex = GLTexture::create();
-    volumeTex->updateTexImage3D(GL_R8, volumeDim, GL_RED, GL_UNSIGNED_BYTE, &volumeDataTest.front());
+    volumeTex->updateTexImage3D(GL_R8, volumeDim, GL_RED, GL_UNSIGNED_BYTE, &volumeData.front());
     // create OpenGL textures for tricubic interpolation
-    std::vector<unsigned char> volumeDataCubic;
-    volumeDataCubic.resize(volumeSize*64);
 
 //    volumeTexTriCubic = GLTexture::create();
 //    volumeTexTriCubic->updateTexImage3DNoInterpolation(GL_R8, volumeDim, GL_RED, GL_UNSIGNED_BYTE, &volumeData.front());
@@ -235,7 +236,7 @@ void GLWidget::paintGL()
     volumeRayCastingProgram->setUniform("OCSize", opacityCorrection);
 
     volumeRayCastingProgram->setTexture("volumeTex", volumeTex);
-    volumeRayCastingProgram->setTexture("volumeTexCubic", volumeTexCubic);
+//    volumeRayCastingProgram->setTexture("volumeTexCubic", volumeTexCubic);
     volumeRayCastingProgram->setTexture("transferFuncTex", transferFuncTex);
     volumeRayCastingProgram->setTexture("preInt", preIntTex);
     volumeRayCastingProgram->setTexture("LAOTex", LAOTex);
@@ -567,4 +568,19 @@ void GLWidget::drawCubicTexture()
         glViewport(0,0,w ,h);
     }
 
+}
+
+QImage GLWidget::ExtractScreenImage()
+{
+//    this->rend()
+    QImage img = this->grabFrameBuffer();
+    QPainter painter(&img);
+    this->render(&painter);
+//    img.save("/some/file.jpg");
+    return img;
+}
+
+void GLWidget::ExtractImage()
+{
+    emit SendGLImage(ExtractScreenImage());
 }
